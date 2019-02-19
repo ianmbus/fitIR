@@ -22,9 +22,9 @@ import pickle
 
 # ------- HFLS3 observations from Riechers+
 
-lamz = np.array([250., 350., 500., 880., 1110.])
-fluxes = np.array([12., 32.4, 47.3, 33., 21.3])
-errors = np.array([2.3, 2.3, 2.8, 2.4, 1.1])
+lamz = np.array([250., 350., 500., 880., 1110.]) # um
+fluxes = np.array([12., 32.4, 47.3, 33., 21.3]) # mJy
+errors = np.array([2.3, 2.3, 2.8, 2.4, 1.1]) # mJy
 z = 6.34
 
 obs = fitIR.observations(lamz, fluxes, errors, cosmo)
@@ -52,7 +52,7 @@ source.prior_def['emissivity'] = {'type': 'uniform', 'limits': [1.,2.]}
 # ---- analyse results
 
 output = pickle.load(open('test_HFLS3.p','rb')) # --- read in output
-# output = pickle.load(open('test_HFLS3_freez.p','rb')) # --- read in output
+output = pickle.load(open('test_HFLS3_freez.p','rb')) # --- read in output
 
 a = analyse.analyser(output)
 

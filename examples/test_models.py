@@ -29,7 +29,7 @@ plt.plot(np.log10(lam), greybody({'T': 40, 'emissivity': 1.6}).Lnu(lam, normalis
 plt.plot(np.log10(lam),  Casey12({'T': 40, 'emissivity': 1.6, 'alpha': 2.0}).Lnu(lam, normalised = True), label = 'Casey12')
 
 
-plt.xlabel(r'$\lambda/\mu m$')
+plt.xlabel(r'$\log_{10}(\lambda/\mu m)$')
 plt.ylabel(r'$L_{\nu}/erg\, s^{-1}\, Hz^{-1}$')
 plt.legend()
 
@@ -55,7 +55,7 @@ p = {'T': 40., 'emissivity': 1.6, 'log10LIR': np.log10(3.) + 13. }
 
 plt.plot(np.log10(lamz), greybody(p).fnu(lamz, z, cosmo))
 
-plt.xlabel(r'$\lambda_{obs}/\mu m$')
+plt.xlabel(r'$\log_{10}\lambda_{obs}/\mu m$')
 plt.ylabel(r'$f_{\nu}/mJy$')
 
 plt.show()

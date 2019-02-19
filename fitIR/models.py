@@ -82,7 +82,7 @@ class greybody(base):
         
         self.kappa = lambda nu: nu**self.emissivity
                 
-        self.normalisation = integrate.quad(self.lnu, self.nu(1000.), self.nu(4.), full_output=False, limit = 100)[0]
+        self.normalisation = integrate.quad(self.lnu, self.nu(1000.), self.nu(8.), full_output=False, limit = 100)[0]
         # self.normalisation /= constants.L_sol.to('erg s^-1').value # --- normalise to solar luminosity
 
 
@@ -128,7 +128,7 @@ class Casey12(base):
         
         self.N_pl = A1/(A2*B)
         
-        self.normalisation = integrate.quad(self.lnu, self.nu(1000.), self.nu(4.), full_output=False, limit = 100)[0]
+        self.normalisation = integrate.quad(self.lnu, self.nu(1000.), self.nu(8.), full_output=False, limit = 100)[0]
        
        
     def lnu_lam(self, l):
