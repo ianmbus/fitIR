@@ -1,51 +1,65 @@
 
 
 import numpy as np
-# import seaborn as sns
-# import pandas as pd
 import matplotlib.pyplot as plt
 
-from fitIR import fitIR
-
-import cPickle as pickle
 
 
-z = 6.
-log10LIR = 10.
-lam = np.arange(1.,5000.,1.)
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from fitIR.models import *
 
 
-T = 35.
-emissivity = 1.6
-
-true_parameters = {'z':z, 'T':T, 'emissivity':emissivity, 'log10LIR': log10LIR}
-
-ts = time.time()
-
-plt.plot(np.log10(lam), fitIR.model(lam, true_parameters).value)
-
-te = time.time()
-
-print te-ts
-
-# ---- show plot of observations
+# This example just plots a pair of models to show the difference between the default Greybody and the Casey12 parameterisation. 
+# In both cases the total IR luminosity, temperature, and emissivity should be identical.
 
 
-T = 35.
-emissivity = 1.6
-alpha = 2.0
 
-true_parameters = {'z':z, 'T':T, 'emissivity':emissivity, 'alpha': alpha, 'log10LIR': log10LIR}
+lam = np.arange(1.,5000.,1.) # um
 
-ts = time.time()
+# ---- default model = greybody
 
-plt.plot(np.log10(lam), fitIR.model(lam, true_parameters, model = 'Casey12').value)
 
-te = time.time()
+plt.plot(np.log10(lam), greybody({'T': 40, 'emissivity': 1.6}).Lnu(lam, normalised = True), label = 'greybody')
 
-print te-ts
+# ---- Casey12 model (with same T, emissivity)
+
+plt.plot(np.log10(lam),  Casey12({'T': 40, 'emissivity': 1.6, 'alpha': 2.0}).Lnu(lam, normalised = True), label = 'Casey12')
+
+
+plt.xlabel(r'$\lambda/\mu m$')
+plt.ylabel(r'$L_{\nu}/erg\, s^{-1}\, Hz^{-1}$')
+plt.legend()
 
 plt.show()
+
+
+
+
+
+
+# ---------- flux plot
+
+from astropy.cosmology import WMAP9 as cosmo
+
+# --- uses HFLS3 approximately
+
+z = 6.3
+lamz = np.arange(1.,5000.,1.) # um
+
+# ---- default model = greybody
+
+p = {'T': 40., 'emissivity': 1.6, 'log10LIR': np.log10(3.) + 13. }
+
+plt.plot(np.log10(lamz), greybody(p).fnu(lamz, z, cosmo))
+
+plt.xlabel(r'$\lambda_{obs}/\mu m$')
+plt.ylabel(r'$f_{\nu}/mJy$')
+
+plt.show()
+
 
 
 

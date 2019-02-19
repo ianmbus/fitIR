@@ -1,14 +1,10 @@
 
-
-
 import numpy as np
 import scipy.stats
 import sys
 import os
 import emcee
-import models
-import cPickle as pickle
-
+from . import models
 
 class delta():
     
@@ -27,64 +23,34 @@ class delta():
 
 
     
-def model(lam, parameters, mod = 'greybody'):
 
-    if mod == 'greybody':
+def model(lamz, p, cosmo, mod = 'greybody'):
 
-        z = parameters['z']
-        T = parameters['T']
-        emissivity = parameters['emissivity']
-        log10LIR = parameters['log10LIR']
-    
-        return 10**log10LIR * models.greybody(T = T, emissivity = emissivity).fnu(lam, z=z).to('uJy')  # return fluxes in uJy   
-
-    if mod == 'Greve12':
-
-        z = parameters['z']
-        T = parameters['T']
-        emissivity = parameters['emissivity']
-        log10LIR = parameters['log10LIR']
-    
-        return 10**log10LIR * models.Greve12(T = T, emissivity = emissivity).fnu(lam, z=z).to('uJy')  # return fluxes in uJy   
-
-
-    if mod == 'Casey12':
-
-        z = parameters['z']
-        T = parameters['T']
-        emissivity = parameters['emissivity']
-        alpha = parameters['alpha']
-        log10LIR = parameters['log10LIR']
-    
-        return 10**log10LIR * models.Casey12(T = T, emissivity = emissivity, alpha = alpha).fnu(lam, z=z).to('uJy')  # return fluxes in uJy   
+    return getattr(models, mod)(p).fnu(lamz, p['z'], cosmo)  
 
 
 
+def fake_observations(lamz, p, cosmo, SNR = 10., mod = 'greybody'):
 
-
-
-def fake_observations(lam, parameters, SNR = 10., mod = 'greybody'):
-
-    fluxes = model(lam, parameters, mod)
+    fluxes = model(lamz, p, cosmo, mod = mod)
 
     errors = fluxes/SNR
 
-    fluxes += errors * np.random.randn(len(lam))
+    fluxes += errors * np.random.randn(len(lamz))
 
-    obs = observations(lam, fluxes, errors, truth = parameters)
+    obs = observations(lamz, fluxes, errors, cosmo, truth = p)
 
     return obs
 
 
 class observations():
 
-    # could instead use a dictionary but I prefer this.
+    def __init__(self, lamz, fluxes, errors, cosmo, truth = False):
 
-    def __init__(self, lam, fluxes, errors, truth = False):
-
-        self.lam = lam
-        self.fluxes = fluxes.to('uJy').value
-        self.errors = errors.to('uJy').value
+        self.cosmo = cosmo
+        self.lamz = lamz
+        self.fluxes = fluxes
+        self.errors = errors
         self.truth = truth
     
 
@@ -92,16 +58,14 @@ class output: pass # --- output class
 
 
 
-
-   
-    
     
 class source():
 
 
     def __init__(self, obs, mod = 'greybody'):
      
-     
+        
+        self.cosmo = obs.cosmo
      
         # --- define observations
      
@@ -182,8 +146,7 @@ class source():
         if not np.isfinite(lp):
             return -np.inf
 
-        fluxes_model = model(self.obs.lam, p, mod = self.mod).value
-
+        fluxes_model = model(self.obs.lamz, p, cosmo = self.cosmo, mod = self.mod)
 
         LNPROB =  lp + self.lnlike(fluxes_model)
 
@@ -192,7 +155,7 @@ class source():
         return LNPROB
 
 
-    def runMCMC(self, nwalkers = 50, nsamples = 1000):
+    def fit(self, nwalkers = 50, nsamples = 1000, burn = 200):
     
         ndim = len(self.parameters)
     
@@ -202,39 +165,38 @@ class source():
         self.nwalkers = nwalkers        
         self.nsamples = nsamples
     
-        pos = [ [self.priors[parameter].rvs() for parameter in self.parameters] for i in range(nwalkers)]
+        p0 = [ [self.priors[parameter].rvs() for parameter in self.parameters] for i in range(nwalkers)]
         
-        self.sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnprob, args=())
+        self.sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.lnprob, args=())
+        pos, prob, state = self.sampler.run_mcmc(p0, burn)
+        self.sampler.reset()
         self.sampler.run_mcmc(pos, nsamples)
         
-
-        
-        
-        
-        
-    def save(self, file):
     
+        chains = self.sampler.chain[:, :, ].reshape((-1, self.ndim))
     
+        samples = {p: chains[:,ip] for ip, p in enumerate(self.parameters)}
+        
+        
         out = output()
         
+        out.obs = self.obs
+        out.samples = samples
         out.parameters = self.parameters
-        out.mod = self.mod
-        
-        out.obs = self.obs 
-        
-        
+        out.model = self.mod
         out.prior_def = self.prior_def
         
+        return out
+
         
-        samples = self.sampler.chain[:, 500:, ].reshape((-1, self.ndim))
+        
+        
+        
 
-        out.P = {}
-        for ip, parameter in enumerate(self.parameters):
-            out.P[parameter] = np.array([np.percentile(samples[:,ip], x) for x in range(0,101)])
 
-        out.ndim = self.ndim 
-        out.nwalkers = self.nwalkers 
-        out.nsamples = self.nsamples
-#         out.chain = self.sampler.chain 
-
-        pickle.dump(out, open(file,'wb'))
+        
+        
+        
+        
+    
+   
