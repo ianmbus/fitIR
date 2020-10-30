@@ -90,6 +90,11 @@ class greybody(base):
         
         return self.kappa(nu)*planck(self.T).Lnu(nu) 
     
+    def generate_greybody(self,nu,z): 
+        #generate a greybody with the parameters provided. Only works if the parameters are delta functions
+        lnu = self.kappa(nu)*planck(self.T).Lnu(nu)/self.normalisation* constants.L_sol*10**self.log10LIR # erg/s/Hz
+        nu = nu/(1+z)
+        return  [nu,lnu]
 
   
 

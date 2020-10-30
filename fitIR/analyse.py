@@ -108,6 +108,60 @@ class analyser():
 
 
 
+class analyser():
+
+
+    def __init__(self, output):
+    
+        self.obs = output.obs
+        self.s = output.samples
+        self.params = output.parameters
+        self.model = output.model
+        self.prior_def = output.prior_def
+
+        self.p_fit = self.median()
+
+            
+    def median(self):
+    
+        return {p: np.median(self.s[p]) for p in self.params}   
+
+    def P(self):
+    
+        return {p: np.array([np.percentile(self.s[p], x) for x in [5., 16., 50., 84., 95.]]) for p in self.params}   
+        
+    
+    def sed_plot(self, save_file = False):
+    
+        # --- plot full input model
+
+        lamz = np.arange(100.,5000.,1.)
+
+        if self.obs.truth:
+
+            plt.plot(np.log10(lamz), getattr(models, self.model)(self.obs.truth).fnu(lamz, self.obs.truth['z'], self.obs.cosmo), zorder = 0, c='k', alpha = 0.2, lw = 3, label = 'truth')
+
+        plt.plot(np.log10(lamz), getattr(models, self.model)(self.p_fit).fnu(lamz, self.p_fit['z'], self.obs.cosmo), zorder = 0, c='k', alpha = 0.5, lw = 2, ls=':', label = 'fit')
+
+
+        for i, (l, f, e) in enumerate(zip(self.obs.lamz, self.obs.fluxes, self.obs.errors)):
+
+            c = cm.viridis(i/len(self.obs.lamz))
+            plt.scatter(np.log10(l), f, c=[c], zorder = 1)
+            plt.plot([np.log10(l)]*2, [f-e, f+e], c=c, zorder = 1)
+
+
+        plt.xlabel(r'$\lambda_{obs}/\mu m$')
+        plt.ylabel(r'$f_{\nu}/mJy$')
+        plt.legend()
+
+        if save_file:
+            plt.savefig(save_file)
+
+        plt.show()
+
+
+
     def triangle_plot(self, save_file = False, contours = False, hist2d = True, use_prior_range = True, bins = 50):
     
         
@@ -116,7 +170,9 @@ class analyser():
         self.pparams = []
         
         for p in self.params: 
-            if self.prior_def[p]['type']=='uniform': self.pparams.append(p)
+            if self.prior_def[p]['type']!='delta':
+                print(p)
+                self.pparams.append(p)
     
         n = len(self.pparams)
     
@@ -124,10 +180,10 @@ class analyser():
 
         plt.rcParams['mathtext.fontset'] = 'stixsans'
         plt.rcParams['text.usetex'] = False
-        plt.rcParams['font.size'] = 7 # perhaps should depend on number of parameters to be plotted
+        plt.rcParams['font.size'] = 12 # perhaps should depend on number of parameters to be plotted
 
-        plt.rcParams['ytick.labelsize'] = 4 # perhaps should depend on number of parameters to be plotted
-        plt.rcParams['xtick.labelsize'] = 4 # perhaps should depend on number of parameters to be plotted
+        plt.rcParams['ytick.labelsize'] = 10 # perhaps should depend on number of parameters to be plotted
+        plt.rcParams['xtick.labelsize'] = 10 # perhaps should depend on number of parameters to be plotted
     
         plt.rcParams['ytick.direction'] = 'in'    # direction: in, out, or inout
         plt.rcParams['xtick.direction'] = 'in'    # direction: in, out, or inout
@@ -182,8 +238,15 @@ class analyser():
                     median = np.percentile(self.s[pi], 50)
                 
                     if use_prior_range:
+                        if self.prior_def[pi]['type']=='uniform':
+                            range = self.prior_def[pi]['limits']
+                        elif self.prior_def[pi]['type']=='custom_pdf':
+                            low = self.prior_def[pi]['cdf_y'][0]
+                            high = self.prior_def[pi]['cdf_y'][-1]
+                            #length = len(self.prior_def[pi]['cdf_y'])
+                            range = [low,high]
                     
-                        range = self.prior_def[pi]['limits']
+                        #range = self.prior_def[pi]['limits']
                     
                     else:
                 
@@ -228,9 +291,17 @@ class analyser():
                     
     
                     if use_prior_range:
-
-                        rangei = self.prior_def[pi]['limits']
-                        rangej = self.prior_def[pj]['limits']                    
+                        #print('pi is:{} and type is:{}'.format(pi,self.prior_def[pi]['type']))
+                        if self.prior_def[pi]['type']=='uniform':
+                            rangei = self.prior_def[pi]['limits']
+                        elif self.prior_def[pi]['type']=='custom_pdf':
+                            rangei = [self.prior_def[pi]['cdf_y'][0],self.prior_def[pi]['cdf_y'][-1]]
+                        #print('pj is:{} and type is:{}'.format(pj,self.prior_def[pj]['type']))
+                        if self.prior_def[pj]['type']=='uniform':
+                            rangej = self.prior_def[pj]['limits']
+                        elif self.prior_def[pj]['type']=='custom_pdf':
+                            rangej = [self.prior_def[pj]['cdf_y'][0],self.prior_def[pj]['cdf_y'][-1]]
+                                            
                     
                     else:
     

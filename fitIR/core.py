@@ -4,6 +4,7 @@ import scipy.stats
 import sys
 import os
 import emcee
+import matplotlib.pyplot as plt
 from . import models
 
 class delta():
@@ -20,6 +21,23 @@ class delta():
             return 0.0
         else:
             return -np.inf
+        
+class custom_pdf():
+    
+    def __init__(self, cdf_x, cdf_y):
+        self.cdf_x = cdf_x
+        self.cdf_y = cdf_y
+        
+    def rvs(self):
+        v = np.random.rand(1)
+        #can consider rounding this number to a ceratin SF level if code runs to slow
+        return (np.interp(v,self.cdf_x,self.cdf_y)[0])
+        
+    def logpdf(self,v):
+        if (v>np.max(self.cdf_y)) or (v<np.min(self.cdf_y)):
+            return -np.inf
+        else:
+            return np.log10(np.interp(v,self.cdf_x,self.cdf_y))
 
 
     
@@ -126,6 +144,10 @@ class source():
             if self.prior_def[parameter]['type'] == 'norm': 
             
                 self.priors[parameter] = scipy.stats.norm(loc = self.prior_def[parameter]['loc'], scale = self.prior_def[parameter]['scale'])
+                
+            if self.prior_def[parameter]['type'] == 'custom_pdf': 
+            
+                self.priors[parameter] = custom_pdf(cdf_x = self.prior_def[parameter]['cdf_x'], cdf_y = self.prior_def[parameter]['cdf_y'])
 
 
 
@@ -142,7 +164,7 @@ class source():
         p = {parameter:params[i] for i,parameter in enumerate(self.parameters)}
       
         lp = np.sum([self.priors[parameter].logpdf(p[parameter]) for parameter in self.parameters])
-  
+
         if not np.isfinite(lp):
             return -np.inf
 
@@ -160,12 +182,16 @@ class source():
         ndim = len(self.parameters)
     
         self.update_priors()
+        
+        #plt.plot(self.priors['z'].cdf_x,self.priors['z'].cdf_y)
+        #plt.show()
     
         self.ndim = ndim
         self.nwalkers = nwalkers        
         self.nsamples = nsamples
     
         p0 = [ [self.priors[parameter].rvs() for parameter in self.parameters] for i in range(nwalkers)]
+
         
         self.sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.lnprob, args=())
         pos, prob, state = self.sampler.run_mcmc(p0, burn)
